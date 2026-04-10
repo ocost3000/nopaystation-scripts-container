@@ -1,0 +1,184 @@
+schemaVersion: 2.0.0
+
+# ── File existence & executability (12 tests) ──────────────────────────────
+fileExistenceTests:
+  - name: "pkg2zip exists"
+    path: "/usr/local/bin/pkg2zip"
+    shouldExist: true
+
+  - name: "mktorrent exists"
+    path: "/usr/local/bin/mktorrent"
+    shouldExist: true
+
+  - name: "t7z exists"
+    path: "/usr/local/bin/t7z"
+    shouldExist: true
+
+  - name: "nps_tsv.sh exists"
+    path: "/scripts/nps_tsv.sh"
+    shouldExist: true
+
+  - name: "nps_game.sh exists"
+    path: "/scripts/nps_game.sh"
+    shouldExist: true
+
+  - name: "nps_update.sh exists"
+    path: "/scripts/nps_update.sh"
+    shouldExist: true
+
+  - name: "nps_dlc.sh exists"
+    path: "/scripts/nps_dlc.sh"
+    shouldExist: true
+
+  - name: "nps_psm.sh exists"
+    path: "/scripts/nps_psm.sh"
+    shouldExist: true
+
+  - name: "nps_psp.sh exists"
+    path: "/scripts/nps_psp.sh"
+    shouldExist: true
+
+  - name: "nps_bundle.sh exists"
+    path: "/scripts/nps_bundle.sh"
+    shouldExist: true
+
+  - name: "nps_region.sh exists"
+    path: "/scripts/nps_region.sh"
+    shouldExist: true
+
+  - name: "pyNPU.py exists"
+    path: "/scripts/pyNPU.py"
+    shouldExist: true
+
+# ── Image metadata ──────────────────────────────────────────────────────────
+metadataTest:
+  workdir: "/scripts"
+
+# ── Environment & executability (command tests) ─────────────────────────────
+commandTests:
+  - name: "PATH contains /scripts"
+    command: "sh"
+    args: ["-c", "echo $PATH"]
+    expectedOutput: ["/scripts"]
+
+  - name: "scripts findable on PATH (which nps_tsv.sh)"
+    command: "which"
+    args: ["nps_tsv.sh"]
+    exitCode: 0
+
+  - name: "python3 available"
+    command: "python3"
+    args: ["--version"]
+    exitCode: 0
+
+  - name: "curl available"
+    command: "curl"
+    args: ["--version"]
+    exitCode: 0
+
+  - name: "pkg2zip executable"
+    command: "test"
+    args: ["-x", "/usr/local/bin/pkg2zip"]
+    exitCode: 0
+
+  - name: "mktorrent executable"
+    command: "test"
+    args: ["-x", "/usr/local/bin/mktorrent"]
+    exitCode: 0
+
+  - name: "t7z executable"
+    command: "test"
+    args: ["-x", "/usr/local/bin/t7z"]
+    exitCode: 0
+
+  - name: "nps_tsv.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_tsv.sh"]
+    exitCode: 0
+
+  - name: "nps_game.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_game.sh"]
+    exitCode: 0
+
+  - name: "nps_update.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_update.sh"]
+    exitCode: 0
+
+  - name: "nps_dlc.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_dlc.sh"]
+    exitCode: 0
+
+  - name: "nps_psm.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_psm.sh"]
+    exitCode: 0
+
+  - name: "nps_psp.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_psp.sh"]
+    exitCode: 0
+
+  - name: "nps_bundle.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_bundle.sh"]
+    exitCode: 0
+
+  - name: "nps_region.sh executable"
+    command: "test"
+    args: ["-x", "/scripts/nps_region.sh"]
+    exitCode: 0
+
+  - name: "pyNPU.py executable"
+    command: "test"
+    args: ["-x", "/scripts/pyNPU.py"]
+    exitCode: 0
+
+  # ── Script invocations (no-args → argument validation, not network) ──────
+  - name: "nps_tsv.sh no args exits non-zero"
+    command: "nps_tsv.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_game.sh no args exits non-zero"
+    command: "nps_game.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_update.sh no args exits non-zero"
+    command: "nps_update.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_dlc.sh no args exits non-zero"
+    command: "nps_dlc.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_psm.sh no args exits non-zero"
+    command: "nps_psm.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_psp.sh no args exits non-zero"
+    command: "nps_psp.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_bundle.sh no args exits non-zero"
+    command: "nps_bundle.sh"
+    args: []
+    exitCode: 1
+
+  - name: "nps_region.sh no args exits non-zero"
+    command: "nps_region.sh"
+    args: []
+    exitCode: 1
+
+  - name: "pyNPU.py -h exits zero and prints usage"
+    command: "pyNPU.py"
+    args: ["-h"]
+    exitCode: 0
+    expectedOutput: ["usage"]
