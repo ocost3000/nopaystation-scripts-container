@@ -1,0 +1,277 @@
+schemaVersion: 2.0.0
+
+# ---------------------------------------------------------------------------
+# 1. IMAGE METADATA
+# Validates PATH prepend and working directory.
+# ---------------------------------------------------------------------------
+metadataTest:
+  envVars:
+    - key: PATH
+      value: "^/scripts:"
+      isRegex: true
+  workdir: /scripts
+
+# ---------------------------------------------------------------------------
+# 2. FILE EXISTENCE — compiled binaries
+# All three binaries are copied from the builder stage into /usr/local/bin.
+# ---------------------------------------------------------------------------
+fileExistenceTests:
+  - name: "binary: pkg2zip exists and is executable"
+    path: /usr/local/bin/pkg2zip
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "binary: mktorrent exists and is executable"
+    path: /usr/local/bin/mktorrent
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "binary: t7z exists and is executable"
+    path: /usr/local/bin/t7z
+    shouldExist: true
+    isExecutableBy: any
+
+  # ---------------------------------------------------------------------------
+  # 3. FILE EXISTENCE — upstream scripts
+  # ---------------------------------------------------------------------------
+  - name: "scripts directory /scripts exists"
+    path: /scripts
+    shouldExist: true
+
+  - name: "script: nps_tsv.sh exists and is executable"
+    path: /scripts/nps_tsv.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_game.sh exists and is executable"
+    path: /scripts/nps_game.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_update.sh exists and is executable"
+    path: /scripts/nps_update.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_dlc.sh exists and is executable"
+    path: /scripts/nps_dlc.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_psm.sh exists and is executable"
+    path: /scripts/nps_psm.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_psp.sh exists and is executable"
+    path: /scripts/nps_psp.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_bundle.sh exists and is executable"
+    path: /scripts/nps_bundle.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: nps_region.sh exists and is executable"
+    path: /scripts/nps_region.sh
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: pyNPU.py exists and is executable"
+    path: /scripts/pyNPU.py
+    shouldExist: true
+    isExecutableBy: any
+
+  - name: "script: functions.sh exists"
+    path: /scripts/functions.sh
+    shouldExist: true
+
+# ---------------------------------------------------------------------------
+# 4. COMMAND TESTS — runtime package availability
+# Verifies each runtime apt package installed in the final stage is present.
+# No network calls are made.
+# ---------------------------------------------------------------------------
+commandTests:
+  - name: "runtime: python3 is available"
+    command: python3
+    args: ["--version"]
+    exitCode: 0
+    expectedOutput: ["Python 3"]
+
+  - name: "runtime: curl is available"
+    command: curl
+    args: ["--version"]
+    exitCode: 0
+    expectedOutput: ["curl"]
+
+  - name: "runtime: wget is available"
+    command: wget
+    args: ["--version"]
+    exitCode: 0
+
+  - name: "runtime: git is available"
+    command: git
+    args: ["--version"]
+    exitCode: 0
+    expectedOutput: ["git version"]
+
+  - name: "runtime: file is available"
+    command: file
+    args: ["--version"]
+    exitCode: 0
+
+  # ---------------------------------------------------------------------------
+  # 5. COMMAND TESTS — Python library imports
+  # Verifies python3-lxml and python3-requests are installed.
+  # ---------------------------------------------------------------------------
+  - name: "python library: lxml is importable"
+    command: python3
+    args: ["-c", "import lxml; print('lxml ok')"]
+    exitCode: 0
+    expectedOutput: ["lxml ok"]
+
+  - name: "python library: requests is importable"
+    command: python3
+    args: ["-c", "import requests; print('requests ok')"]
+    exitCode: 0
+    expectedOutput: ["requests ok"]
+
+  # ---------------------------------------------------------------------------
+  # 6. COMMAND TESTS — compiled binaries are functional
+  # Each binary is invoked with a flag or command that exits without network
+  # access or file I/O.
+  # ---------------------------------------------------------------------------
+  - name: "binary execution: pkg2zip prints usage on no args"
+    command: pkg2zip
+    args: []
+    # pkg2zip exits non-zero with no arguments and prints usage to stderr
+    expectedError: ["pkg2zip|Usage|usage"]
+
+  - name: "binary execution: t7z is a valid ELF executable"
+    # Invoke via `file` to safely confirm the binary is a valid ELF without
+    # relying on t7z having a --help flag.
+    command: file
+    args: ["/usr/local/bin/t7z"]
+    exitCode: 0
+    expectedOutput: ["ELF|executable|script"]
+
+  # ---------------------------------------------------------------------------
+  # 7. COMMAND TESTS — scripts are on PATH
+  # Verifies ENV PATH="/scripts:$PATH" works: all scripts are resolvable.
+  # nps_tsv.sh is excluded from command tests because it makes network calls
+  # when invoked with no arguments.
+  # ---------------------------------------------------------------------------
+  - name: "PATH: nps_game.sh is on PATH"
+    command: which
+    args: ["nps_game.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_game.sh"]
+
+  - name: "PATH: nps_update.sh is on PATH"
+    command: which
+    args: ["nps_update.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_update.sh"]
+
+  - name: "PATH: nps_dlc.sh is on PATH"
+    command: which
+    args: ["nps_dlc.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_dlc.sh"]
+
+  - name: "PATH: nps_psm.sh is on PATH"
+    command: which
+    args: ["nps_psm.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_psm.sh"]
+
+  - name: "PATH: nps_psp.sh is on PATH"
+    command: which
+    args: ["nps_psp.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_psp.sh"]
+
+  - name: "PATH: nps_bundle.sh is on PATH"
+    command: which
+    args: ["nps_bundle.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_bundle.sh"]
+
+  - name: "PATH: nps_region.sh is on PATH"
+    command: which
+    args: ["nps_region.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_region.sh"]
+
+  - name: "PATH: nps_tsv.sh is on PATH"
+    command: which
+    args: ["nps_tsv.sh"]
+    exitCode: 0
+    expectedOutput: ["/scripts/nps_tsv.sh"]
+
+  - name: "PATH: pyNPU.py is on PATH"
+    command: which
+    args: ["pyNPU.py"]
+    exitCode: 0
+    expectedOutput: ["/scripts/pyNPU.py"]
+
+  # ---------------------------------------------------------------------------
+  # 8. COMMAND TESTS — script smoke tests (no network, argument-error paths)
+  # Each script is invoked with deliberately missing arguments. This validates:
+  # - the script is executable by the shell
+  # - it sources functions.sh without error
+  # - check_binaries passes (confirming pkg2zip, t7z, file, etc. are present)
+  # - it produces the expected usage/error message
+  # Scripts exit before any download logic is reached, so no network calls occur.
+  # ---------------------------------------------------------------------------
+  - name: "smoke test: nps_game.sh exits 1 on missing args"
+    command: nps_game.sh
+    args: []
+    exitCode: 1
+    expectedError: ["No TSV file found\\.|No game ID found\\.|Usage"]
+
+  - name: "smoke test: nps_update.sh exits 1 on missing args"
+    command: nps_update.sh
+    args: []
+    exitCode: 1
+    expectedError: ["No game ID found\\.|Usage"]
+
+  - name: "smoke test: nps_dlc.sh exits 1 on missing args"
+    command: nps_dlc.sh
+    args: []
+    exitCode: 1
+    expectedError: ["No TSV file found\\.|No game ID found\\.|Usage"]
+
+  - name: "smoke test: nps_psm.sh exits 1 on missing args"
+    command: nps_psm.sh
+    args: []
+    exitCode: 1
+    expectedError: ["No TSV file found\\.|No game ID found\\.|Usage"]
+
+  - name: "smoke test: nps_psp.sh exits 1 on missing args"
+    command: nps_psp.sh
+    args: []
+    exitCode: 1
+    expectedError: ["No TSV file found\\.|No game ID found\\.|Usage"]
+
+  - name: "smoke test: nps_bundle.sh exits 1 on missing -t arg"
+    command: nps_bundle.sh
+    args: []
+    exitCode: 1
+    expectedError: ["TITLE ID.*missing|missing.*TITLE ID|Parameters:|\\-t"]
+
+  - name: "smoke test: nps_region.sh exits 1 on missing required args"
+    command: nps_region.sh
+    args: []
+    exitCode: 1
+    expectedError: ["Not every necessary option|Parameters:|\\-\\-region|\\-r"]
+
+  # ---------------------------------------------------------------------------
+  # 9. COMMAND TESTS — pyNPU.py --help (has a proper help flag via argparse)
+  # ---------------------------------------------------------------------------
+  - name: "pyNPU.py -h exits 0 and prints help text"
+    command: pyNPU.py
+    args: ["-h"]
+    exitCode: 0
+    expectedOutput: ["usage: pyNPU|title.id|changelog"]

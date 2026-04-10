@@ -21,13 +21,15 @@ The image is published to GitHub Container Registry:
 .
 ├── .github/
 │   └── workflows/
-│       └── docker-publish.yml   # CI: builds and pushes image to GHCR on push to main
-├── Dockerfile                   # Multi-stage Docker build definition
-├── LICENSE                      # GPLv3
-└── README.md                    # User-facing documentation with usage examples
+│       └── docker-publish.yml           # CI: build → test → push on push to main
+├── tests/
+│   └── container-structure-test.yml     # Container structure test suite
+├── Dockerfile                           # Multi-stage Docker build definition
+├── LICENSE                              # GPLv3
+└── README.md                            # User-facing documentation with usage examples
 ```
 
-There is no `.gitignore`, no package manager manifest, no test suite, and no Makefile.
+There is no `.gitignore`, no package manager manifest, and no Makefile.
 All dependency declarations live exclusively in the Dockerfile.
 
 ## Dockerfile Architecture
@@ -56,15 +58,17 @@ Compiles and downloads three binary tools:
 ## CI/CD Pipeline
 
 The GitHub Actions workflow (`.github/workflows/docker-publish.yml`) triggers on every push
-to `main`. It:
+to `main`. It runs a gated build-test-push sequence in a single job:
 
 1. Checks out the repository
-2. Logs in to GHCR using `GITHUB_TOKEN`
-3. Extracts metadata: applies `latest` tag on the default branch plus a commit-SHA tag
-4. Builds and pushes with `docker/build-push-action@v6`
+2. **Builds** the image locally (`push: false`, `load: true`) with a stable CI tag
+3. **Downloads** the `container-structure-test` binary from the latest GitHub release
+4. **Runs** `tests/container-structure-test.yml` against the locally loaded image — the push step is skipped if any test fails
+5. Logs in to GHCR using `GITHUB_TOKEN`
+6. Extracts metadata: applies `latest` tag on the default branch plus a commit-SHA tag
+7. **Rebuilds and pushes** to GHCR with `docker/build-push-action@v6` (layer cache makes this fast)
 
-**There are no test or lint steps.** A push to `main` immediately triggers a live image build
-and publish.
+**The registry is never updated if tests fail.** Only images that pass the full test suite are published.
 
 ## Development Workflow
 
@@ -83,13 +87,20 @@ Build the image locally to verify changes before merging:
 docker build -t nopaystation-scripts-container:local .
 ```
 
-Run a quick smoke test:
+Run the container structure test suite against the local image:
 
 ```bash
-docker run --rm nopaystation-scripts-container:local nps_game.sh --help
+# Download the test binary (one-time setup)
+curl -LO https://github.com/GoogleContainerTools/container-structure-test/releases/latest/download/container-structure-test-linux-amd64
+chmod +x container-structure-test-linux-amd64
+
+# Run the tests
+./container-structure-test-linux-amd64 test \
+  --image nopaystation-scripts-container:local \
+  --config tests/container-structure-test.yml
 ```
 
-Mount a local directory to `/data` to capture output files:
+Mount a local directory to `/data` to capture output files from manual runs:
 
 ```bash
 docker run --rm -v /path/to/output:/data nopaystation-scripts-container:local <script> <args>
@@ -106,6 +117,30 @@ Three tools have version-sensitive references in the Dockerfile:
 - **pkg2zip**: clones the tip of the default branch of the lusid1 fork with no version pin.
 
 When changing any of these, rebuild locally and verify the binary executes before merging.
+
+## Test Suite
+
+`tests/container-structure-test.yml` uses the
+[GoogleContainerTools/container-structure-test](https://github.com/GoogleContainerTools/container-structure-test)
+framework. Tests are grouped by concern:
+
+| Section | Type | What it validates |
+|---------|------|-------------------|
+| Metadata | `metadataTest` | `PATH` starts with `/scripts:`, `WORKDIR` is `/scripts` |
+| Binaries | `fileExistenceTests` | `pkg2zip`, `mktorrent`, `t7z` exist at `/usr/local/bin/` and are executable |
+| Scripts | `fileExistenceTests` | All 9 upstream scripts and `functions.sh` exist in `/scripts/` and are executable |
+| Runtime packages | `commandTests` | `python3`, `curl`, `wget`, `git`, `file` are callable |
+| Python libraries | `commandTests` | `lxml` and `requests` are importable |
+| Binary execution | `commandTests` | `pkg2zip` prints usage; `t7z` is a valid ELF via `file` |
+| PATH resolution | `commandTests` | All scripts are resolvable via `which` (confirms PATH prepend) |
+| Script smoke tests | `commandTests` | Scripts exit 1 on missing args and print expected error messages — no network calls |
+| pyNPU.py help | `commandTests` | `pyNPU.py -h` exits 0 and prints argparse help |
+
+**Key design decisions:**
+- `nps_tsv.sh` is excluded from command tests — it makes network calls immediately with no argument guard.
+- Script smoke tests work by passing no arguments, which causes each script to call `check_binaries()` (validating binaries are present) and then exit 1 with a usage message, before any download logic runs.
+- `t7z` has no guaranteed `--help` flag, so it is validated indirectly via `file /usr/local/bin/t7z`.
+- All `expectedError` regex patterns use `\\.` to match literal dots in messages like `No game ID found.`
 
 ## Conventions and Guidelines
 
@@ -127,7 +162,7 @@ When changing any of these, rebuild locally and verify the binary executes befor
 
 ### What this repository does NOT contain
 
-- No application code, tests, linters, or formatters
+- No application code, linters, or formatters
 - No docker-compose file (end users run `docker run` directly)
 - No environment variable configuration (all runtime config is passed as CLI arguments)
 - No post-processing hooks (those are user-supplied, mounted via `/data`)
