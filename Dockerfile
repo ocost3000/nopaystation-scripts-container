@@ -20,7 +20,7 @@ RUN curl -L https://github.com/BubblesInTheTub/torrent7z/releases/download/1.3/t
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-lxml curl wget ca-certificates git file \
+    python3 python3-lxml python3-requests curl wget ca-certificates git file \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/bin/pkg2zip /usr/local/bin/
